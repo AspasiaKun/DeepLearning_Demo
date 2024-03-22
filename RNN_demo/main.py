@@ -6,10 +6,13 @@ import re
 import tensorflow as tf
 import keras
 from d2l import tensorflow as d2l
+from vocab import Vocab
 
-def import_data():
-    batch_size, num_steps = 32, 35
-    train_iter, vocab = d2l.load_data_time_machine(batch_size, num_steps)
+d2l.DATA_HUB['time_machine'] = (d2l.DATA_URL+'timemachine.txt','090b5e7e70c295757f55df93cb0a180b9691891a')
+def read_time_machine():
+    with open(d2l.download('time_machine'),'r') as f:
+        lines = f.readlines()
+    return [re.sub('[^A-Za-z]+',' ',line).strip().lower() for line in lines]
 
 def sequence_gen():
     T = 1000
@@ -26,7 +29,7 @@ def sequence_gen():
 
     batch_size, n_train = 16, 600
     train_iter = d2l.load_array((features[:n_train], labels[:n_train]),batch_size, is_train=True)
-    
+
     net = get_net()
     loss = keras.losses.MeanSquaredError()
     train(net,train_iter,loss,5,0.01)
@@ -45,7 +48,29 @@ def sequence_gen():
          xlim=[1, 1000], figsize=(6, 3))
     #plt.plot(time,x,onestep_preds,multistep_preds)
     
+def load_corpus_time_machine(max_tokens=-1):
+    lines = read_time_machine()
+    print(f'# 文本总行数: {len(lines)}')
+    tokens = tokenize(lines,'char')
+
+    #构建词表映射
+    vocab = Vocab(tokens)
+
+    corpus = [vocab[token] for line in tokens for token in line]
+    if max_tokens > 0:
+        corpus = corpus[:max_tokens]
+    return corpus,vocab
     
+
+
+def tokenize(lines, token='word'):
+    if token == 'word':
+        return [line.split() for line in lines]
+    elif token == 'char':
+        return [list(line) for line in lines]
+    else:
+        print('error: unknow word type' + token)
+
 
 def get_net():
     net = keras.Sequential([keras.layers.Dense(10, activation='relu'),
@@ -65,4 +90,5 @@ def train(net, train_iter, loss, epochs, lr):
         print(f'epoch {epoch + 1},'f'loss: {d2l.evaluate_loss(net, train_iter, loss):f}')
 
 if __name__ == "__main__":
-    sequence_gen()
+    corpus, vocab = load_corpus_time_machine()
+    len(corpus),len(vocab)
